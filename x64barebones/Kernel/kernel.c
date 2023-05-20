@@ -110,7 +110,7 @@ int main()
 	getRTC();
 	ncNewline();
 
-	ncPrint("Prueba para git");
+	ncPrint("Prueba git");
 
 	//Ej4
 	// ncScanf();
