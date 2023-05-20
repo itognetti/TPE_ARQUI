@@ -101,29 +101,12 @@ int main()
 
 	ncClear();
 
-	//Ej1 
-	ncPrint("                         ");
-    printStringColor(" Arquitectura de Computadoras ", 0xF0); 
+	load_idt();
 
-	//Ej3
-	ncPrint("                ");
-	getRTC();
-	ncNewline();
-
-	ncPrint("Prueba git");
-
-	//Ej4
-	// ncScanf();
-	// ncNewline();
-	
-	//Ej5
-	//timerTickIDT();
-
-	//VideoMode
-	// putPixel(0xFF, 0x00, 0x00, 0, 0);
-	// putPixel(0xFF, 0x00, 0x00, 1, 0);
-	// putPixel(0xFF, 0x00, 0x00, 1, 1);
-	// putPixel(0xFF, 0x00, 0x00, 0, 1);
+	putChar('H', 0xFF0000);
+	putChar('O', 0x00FF00);
+	putChar('L', 0x0000FF);
+	putChar('A', 0xF0F0F0);
 
 	return 0;
 }

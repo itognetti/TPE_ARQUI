@@ -16,3 +16,7 @@ ls
 chmod 777 run.sh
 ./run.sh
 exit
+exit
+cd /root
+ls
+exit

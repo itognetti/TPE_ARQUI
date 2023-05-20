@@ -1,5 +1,9 @@
 #include "videoDriver.h"
 #include <stdint.h>
+#include <font.h>
+
+static unsigned int xPos = 0;
+static unsigned int yPos = 0;
 
 struct vbe_mode_info_structure {
 	uint16_t attributes;		// deprecated, only bit 7 should be of interest to you, and it indicates the mode supports a linear frame buffer.
@@ -43,19 +47,107 @@ typedef struct vbe_mode_info_structure * VBEInfoPtr;
 
 VBEInfoPtr VBE_mode_info = (VBEInfoPtr) 0x0000000000005C00;
 
-void putPixel(uint8_t r, uint8_t g, uint8_t b, uint32_t x, uint32_t y){
-    uint8_t * videoPtr = VBE_mode_info->framebuffer;
-    int offset = y * VBE_mode_info->pitch + x * (VBE_mode_info->bpp / 8);
-    videoPtr[offset] = b;
-    videoPtr[offset+1] = g;
-    videoPtr[offset+2] = r;
+void putPixel(uint32_t x, uint32_t y, uint32_t color){
+	uint8_t * videoPtr = VBE_mode_info->framebuffer + (VBE_mode_info->bpp / 8) * (x * VBE_mode_info->width + y);
+
+    int blue = color & 0xFF;
+    int green = (color >> 8) & 0xFF;
+    int red = (color >> 16) & 0xFF;
+
+    *videoPtr = blue;
+    videoPtr++;
+    *videoPtr = green;
+    videoPtr++;
+    *videoPtr = red;
 }
 
-// void putLine(uint8_t r, uint8_t g, uint8_t b){
-// 	uint32_t i, j;
-// 	for(i = 0; i < (VBE_mode_info->bpp / 8); i++){
-// 		for(j = 0; j < (VBE_mode_info->bpp / 8); j++){
-// 			putPixel(r, g, b, i, j);
-// 		}
-// 	}
-// }
+int putCharIn(int character, int row, int col, int color){
+	if (row >= VBE_mode_info->height || col >= VBE_mode_info->width) {
+        return 0;
+    }
+    switch (character) {
+        case '\n':
+            enter();
+            return 0;
+        case '\b':
+            backspace();
+            return 0;
+    }
+    while (row % CHAR_HEIGHT != 0) {
+        row++;
+    }
+    while (col % CHAR_WIDTH != 0) {
+        col++;
+    }
+    unsigned char *bitMap = charBitmap(character);
+    for (int i = 0; i < CHAR_HEIGHT; i++) {
+        for (int j = 0; j < CHAR_WIDTH; j++) {
+            unsigned int point = ((bitMap[i] >> j) & 0x01);
+            if (point == 0) {
+                putPixel(row + i, col + CHAR_WIDTH - j, 0x000000); //black
+            } else {
+                putPixel(row + i, col + CHAR_WIDTH - j, color);
+            }
+        }
+    }
+    return 1;
+}
+
+void enter() {
+    xPos = 0;
+    yPos += CHAR_HEIGHT;
+    inRange();
+    return;
+}
+
+void backspace() {
+    if (xPos == 0 && yPos == 0) {
+        return;
+    }
+    if (xPos == 0) {
+        yPos -= CHAR_HEIGHT;
+        xPos = VBE_mode_info->width;
+    }
+    xPos -= CHAR_WIDTH;
+    for (int i = 0; i < CHAR_HEIGHT; i++) {
+        for (int j = 0; j < CHAR_WIDTH; j++) {
+            putPixel(yPos + i, xPos + j, 0x000000); //black
+        }
+    }
+    return;
+}
+
+int putChar(int character, int color) {
+    int ret = putCharIn(character, yPos, xPos, color);
+    if (ret) {
+        xPos += CHAR_WIDTH;
+    }
+    inRange();
+    return ret;
+}
+
+void clearScreen() {
+    for (int i = 0; i < VBE_mode_info->height; i++) {
+        for (int j = 0; j < VBE_mode_info->width; j++) {
+            putPixel(i, j, 0x000000);
+        }
+    }
+}
+
+void inRange() {
+    if (xPos >= VBE_mode_info->width) { //si x alcanza el ancho de la pantalla hace enter
+        xPos = 0;
+        yPos += CHAR_HEIGHT;
+    }
+    if (yPos >= VBE_mode_info->height) { //si y alcanza el largo de la pantalla borra una linea y mueve todo hacia arriba
+        yPos = VBE_mode_info->height - CHAR_HEIGHT;
+		int size = (VBE_mode_info->bpp / 8);
+        int length = (VBE_mode_info->width * VBE_mode_info->height * size) - ((size * VBE_mode_info->width) * 16);
+    	memcpy((void *) (uint64_t)(VBE_mode_info->framebuffer), (void *) (uint64_t)(VBE_mode_info->framebuffer + (size * VBE_mode_info->width) * CHAR_HEIGHT), length);
+    	for (int i = yPos; i < yPos + CHAR_HEIGHT; i++) {
+        	for (int j = 0; j < VBE_mode_info->width; j++) {
+            	putPixel(i, j, 0x000000);
+       	 	}
+		}
+    }
+}

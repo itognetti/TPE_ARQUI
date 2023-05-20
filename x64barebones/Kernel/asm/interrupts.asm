@@ -151,8 +151,3 @@ haltcpu:
 	cli
 	hlt
 	ret
-
-
-SECTION .bss
-	aux resq 1
-	
