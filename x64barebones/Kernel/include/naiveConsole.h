@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define MAX_DIGITS 20
+
 void ncPrint(const char * string);
 void ncPrintChar(char character);
 void ncNewline();
@@ -13,9 +15,7 @@ void ncPrintBase(uint64_t value, uint32_t base);
 void ncClear();
 void printCharColor(uint8_t character, uint8_t attribute);
 void printStringColor(const char * string, uint16_t attribute);
-void getRTC();
-// void convertToGMT3(int * hours, int * days, int * month, int * year);
-void ncScanf();
-void timerTickIDT();
+uint32_t uintToBase(uint64_t value, char * buffer, uint32_t base);
+void uintToBaseN(uint64_t number, char* result, int base);
 
 #endif

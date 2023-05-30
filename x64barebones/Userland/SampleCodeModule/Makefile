@@ -15,8 +15,8 @@ STATICLIBS=
 
 all: $(MODULE)
 
-$(MODULE): $(LOADEROBJECT) $(OBJECTS) $(STATICLIBS) $(OBJECTS_ASM)
-	$(LD) $(LDFLAGS) -T sampleCodeModule.ld -o ../$(MODULE) $(LOADEROBJECT) $(OBJECTS) $(OBJECTS_ASM) $(STATICLIBS)
+$(MODULE): $(LOADEROBJECT) $(OBJECTS) $(STATICLIBS) $(OBJECTS_ASM) $(OBJECTS_C)
+	$(LD) $(LDFLAGS) -T sampleCodeModule.ld -o ../$(MODULE) $(LOADEROBJECT) $(OBJECTS) $(OBJECTS_ASM) $(OBJECTS_C) $(STATICLIBS)
 
 %.o: %.c
 	$(GCC) $(GCCFLAGS) -I./include -c $< -o $@
@@ -28,6 +28,6 @@ $(LOADEROBJECT):
 	$(GCC) $(GCCFLAGS) $(LOADERSRC) -c -o $(LOADEROBJECT)
 
 clean:
-	rm -rf asm/*.o *.o *.bin
+	rm -rf asm/*.o *.o *.bin c/*.o
 
 .PHONY: all clean print

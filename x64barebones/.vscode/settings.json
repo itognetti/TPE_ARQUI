@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "libio.h": "c",
+        "naiveconsole.h": "c",
+        "syscalls.h": "c",
+        "keyboarddriver.h": "c",
+        "idtloader.h": "c"
+    }
+}

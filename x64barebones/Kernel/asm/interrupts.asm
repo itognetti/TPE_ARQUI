@@ -1,4 +1,3 @@
-
 GLOBAL _cli
 GLOBAL _sti
 GLOBAL picMasterMask
@@ -12,12 +11,19 @@ GLOBAL _irq02Handler
 GLOBAL _irq03Handler
 GLOBAL _irq04Handler
 GLOBAL _irq05Handler
+GLOBAL _syscallHandler
 
 GLOBAL _exception0Handler
 GLOBAL _exception6Handler
 
+GLOBAL saveInitialConditions
+GLOBAL _beep_start
+GLOBAL _beep_stop
+
 EXTERN irqDispatcher
 EXTERN exceptionDispatcher
+EXTERN syscallDispatcher
+EXTERN getStackBase
 
 SECTION .text
 
@@ -61,6 +67,7 @@ SECTION .text
 	pushState
 
 	mov rdi, %1 ; pasaje de parametro
+	mov rsi, rsp ; pasaje del "vector" de registros
 	call irqDispatcher
 
 	; signal pic EOI (End of Interrupt)
@@ -77,12 +84,21 @@ SECTION .text
 	pushState
 
 	mov rdi, %1 ; pasaje de parametro
+	mov rsi, rsp ; pasaje del "vector" de registros
 	call exceptionDispatcher
-
 	popState
+
+	call getStackBase
+	mov [rsp + 3*8], rax ;seteamos rsp a base del stack
+	mov rax, 0x400000
+	mov [rsp], rax
 	iretq
 %endmacro
 
+; int 80
+_syscallHandler:
+	call syscallDispatcher
+	iretq
 
 _hlt:
 	sti
@@ -145,9 +161,58 @@ _exception0Handler:
 
 ;Invalid Code Exception
 _exception6Handler:
-	irqHandlerMaster 6
+	exceptionHandler 6
 
 haltcpu:
 	cli
 	hlt
 	ret
+
+;---------------------------------------------------------
+; Save Initial Registers (to restore in case of exception)
+;---------------------------------------------------------
+saveInitialConditions:
+    mov rax, rdi
+    mov [initialConditions], rax
+    mov rax, rsp
+    mov [initialConditions + 8], rax
+    ret
+;---------------------------------------------------------
+
+_beep_start:
+    push rbp
+    mov rbp, rsp
+
+    mov al, 0xB6
+    out 43h, al
+
+    mov rbx, rdi
+    mov rax, 0
+    mov ax, bx
+
+    out 42h, al
+    mov al, ah
+    out 42h, al
+
+    in al, 61h 
+    or al, 03h 
+    out 61h, al
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+_beep_stop:
+	push rbp
+    mov rbp, rsp
+
+    in al, 61h
+    and al, 0xFC
+    out 61h, al
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+SECTION .bss
+    initialConditions resb 16 ; rdi: primeros 8 bits - rip: segundos 8 bits

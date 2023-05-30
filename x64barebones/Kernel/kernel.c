@@ -1,8 +1,11 @@
 #include <stdint.h>
-#include <string.h>
 #include <lib.h>
 #include <moduleLoader.h>
 #include <naiveConsole.h>
+#include <videoDriver.h>
+#include <idtLoader.h>
+
+void extern saveInitialConditions(uint64_t);
 
 extern uint8_t text;
 extern uint8_t rodata;
@@ -35,78 +38,58 @@ void * getStackBase()
 
 void * initializeKernelBinary()
 {
-	char buffer[10];
+  char buffer[10];
 
-	ncPrint("[x64BareBones]");
-	ncNewline();
+    ncPrint("[x64BareBones]");
+    ncNewline();
 
-	ncPrint("CPU Vendor:");
-	ncPrint(cpuVendor(buffer));
-	ncNewline();
+    ncPrint("CPU Vendor:");
+    ncPrint(cpuVendor(buffer));
+    ncNewline();
 
-	ncPrint("[Loading modules]");
-	ncNewline();
-	void * moduleAddresses[] = {
-		sampleCodeModuleAddress,
-		sampleDataModuleAddress
-	};
+    ncPrint("[Loading modules]");
+    ncNewline();
+    void * moduleAddresses[] = {
+            sampleCodeModuleAddress,
+            sampleDataModuleAddress
+    };
 
-	loadModules(&endOfKernelBinary, moduleAddresses);
-	ncPrint("[Done]");
-	ncNewline();
-	ncNewline();
+    loadModules(&endOfKernelBinary, moduleAddresses);
+    ncPrint("[Done]");
+    ncNewline();
+    ncNewline();
 
-	ncPrint("[Initializing kernel's binary]");
-	ncNewline();
+    ncPrint("[Initializing kernel's binary]");
+    ncNewline();
 
-	clearBSS(&bss, &endOfKernel - &bss);
+    clearBSS(&bss, &endOfKernel - &bss);
 
-	ncPrint("  text: 0x");
-	ncPrintHex((uint64_t)&text);
-	ncNewline();
-	ncPrint("  rodata: 0x");
-	ncPrintHex((uint64_t)&rodata);
-	ncNewline();
-	ncPrint("  data: 0x");
-	ncPrintHex((uint64_t)&data);
-	ncNewline();
-	ncPrint("  bss: 0x");
-	ncPrintHex((uint64_t)&bss);
-	ncNewline();
+    ncPrint("  text: 0x");
+    ncPrintHex((uint64_t) & text);
+    ncNewline();
+    ncPrint("  rodata: 0x");
+    ncPrintHex((uint64_t) & rodata);
+    ncNewline();
+    ncPrint("  data: 0x");
+    ncPrintHex((uint64_t) & data);
+    ncNewline();
+    ncPrint("  bss: 0x");
+    ncPrintHex((uint64_t) & bss);
+    ncNewline();
 
-	ncPrint("[Done]");
-	ncNewline();
-	ncNewline();
-	return getStackBase();
+    ncPrint("[Done]");
+    ncNewline();
+    ncNewline();
+    return getStackBase();
 }
 
 int main()
 {	
-	ncPrint("[Kernel Main]");
-	ncNewline();
-	ncPrint("  Sample code module at 0x");
-	ncPrintHex((uint64_t)sampleCodeModuleAddress);
-	ncNewline();
-	ncPrint("  Calling the sample code module returned: ");
-	ncPrintHex(((EntryPoint)sampleCodeModuleAddress)());
-	ncNewline();
-	ncNewline();
+  load_idt();
+  // saveInitialConditions((uint64_t) sampleCodeModuleAddress);
 
-	ncPrint("  Sample data module at 0x");
-	ncPrintHex((uint64_t)sampleDataModuleAddress);
-	ncNewline();
-	ncPrint("  Sample data module contents: ");
-	ncPrint((char*)sampleDataModuleAddress);
-	ncNewline();
+  ncPrint("Calling the sample code module returned: ");
+  ncPrintHex(((EntryPoint) sampleCodeModuleAddress)());
 
-	ncClear();
-
-	load_idt();
-
-	putChar('H', 0xFF0000);
-	putChar('O', 0x00FF00);
-	putChar('L', 0x0000FF);
-	putChar('A', 0xF0F0F0);
-
-	return 0;
+    return 0;
 }

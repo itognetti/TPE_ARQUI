@@ -1,6 +1,4 @@
-#include "videoDriver.h"
-#include <stdint.h>
-#include <font.h>
+#include <videoDriver.h>
 
 static unsigned int xPos = 0;
 static unsigned int yPos = 0;
@@ -48,7 +46,7 @@ typedef struct vbe_mode_info_structure * VBEInfoPtr;
 VBEInfoPtr VBE_mode_info = (VBEInfoPtr) 0x0000000000005C00;
 
 void putPixel(uint32_t x, uint32_t y, uint32_t color){
-	uint8_t * videoPtr = VBE_mode_info->framebuffer + (VBE_mode_info->bpp / 8) * (x * VBE_mode_info->width + y);
+	uint8_t * videoPtr = (uint8_t *)((uint64_t)VBE_mode_info->framebuffer) + (VBE_mode_info->bpp / 8) * (x * VBE_mode_info->width + y);
 
     int blue = color & 0xFF;
     int green = (color >> 8) & 0xFF;
@@ -84,7 +82,7 @@ int putCharIn(int character, int row, int col, int color){
         for (int j = 0; j < CHAR_WIDTH; j++) {
             unsigned int point = ((bitMap[i] >> j) & 0x01);
             if (point == 0) {
-                putPixel(row + i, col + CHAR_WIDTH - j, 0x000000); //black
+                putPixel(row + i, col + CHAR_WIDTH - j, BLACK);
             } else {
                 putPixel(row + i, col + CHAR_WIDTH - j, color);
             }
@@ -93,10 +91,19 @@ int putCharIn(int character, int row, int col, int color){
     return 1;
 }
 
+
+void putChar(int character, int color) {
+    int ret = putCharIn(character, yPos, xPos, color);
+    if (ret) {
+        xPos += CHAR_WIDTH;
+    }
+    updateCoordinates(); //Actualiza la posicon de la pantalla
+}
+
 void enter() {
     xPos = 0;
     yPos += CHAR_HEIGHT;
-    inRange();
+    updateCoordinates();
     return;
 }
 
@@ -111,31 +118,24 @@ void backspace() {
     xPos -= CHAR_WIDTH;
     for (int i = 0; i < CHAR_HEIGHT; i++) {
         for (int j = 0; j < CHAR_WIDTH; j++) {
-            putPixel(yPos + i, xPos + j, 0x000000); //black
+            putPixel(yPos + i, xPos + j, BLACK); //black
         }
     }
     return;
 }
 
-int putChar(int character, int color) {
-    int ret = putCharIn(character, yPos, xPos, color);
-    if (ret) {
-        xPos += CHAR_WIDTH;
-    }
-    inRange();
-    return ret;
-}
-
 void clearScreen() {
     for (int i = 0; i < VBE_mode_info->height; i++) {
         for (int j = 0; j < VBE_mode_info->width; j++) {
-            putPixel(i, j, 0x000000);
+            putPixel(i, j, BLACK);
         }
     }
+    xPos = 0;
+    yPos = 0;
 }
 
-void inRange() {
-    if (xPos >= VBE_mode_info->width) { //si x alcanza el ancho de la pantalla hace enter
+void updateCoordinates() {
+    if (xPos >= VBE_mode_info->width) { //si x alcanza el ancho de la pantalla paso a la siguiente linea
         xPos = 0;
         yPos += CHAR_HEIGHT;
     }
@@ -146,8 +146,46 @@ void inRange() {
     	memcpy((void *) (uint64_t)(VBE_mode_info->framebuffer), (void *) (uint64_t)(VBE_mode_info->framebuffer + (size * VBE_mode_info->width) * CHAR_HEIGHT), length);
     	for (int i = yPos; i < yPos + CHAR_HEIGHT; i++) {
         	for (int j = 0; j < VBE_mode_info->width; j++) {
-            	putPixel(i, j, 0x000000);
+            	putPixel(i, j, BLACK);
        	 	}
 		}
     }
+}
+
+//Imprime a partir de una posicion determinada, indicada por las coordenadas (row, col)
+void printIn(char *string, int row, int col, int color) {
+    int length = strlen(string);
+        for (int i = 0; i < length; i++) {
+            if (putCharIn(string[i], row, col, color)) {
+                col += CHAR_WIDTH;
+                if (col >= WIDTH) {
+                    row += CHAR_HEIGHT;
+                    col = 0;
+                }
+                if (row >= HEIGHT) {
+                    row = 0;
+                }
+            }
+        }
+}
+//Imprime a partir de la posicion actual del cursor (xPos, yPos)
+void print(char *string, int color){
+    int length = strlen(string);
+    for (int i = 0; i < length; i++) {
+            putChar(string[i], color);
+        }
+}
+
+void println(char *string, int color) {
+    print(string, color);
+    print("\n", BLACK);
+}
+
+int strlen(char *string) {
+    int length = 0;
+    while (*string != 0) {
+        length++;
+        string++;
+    }
+    return length;
 }
