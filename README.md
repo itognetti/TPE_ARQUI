@@ -3,7 +3,6 @@
 . Fecha de entrega: 05/06/23
 
 . Primer Cuatrimestre 2021
----
 
 ## Integrantes:
 
@@ -12,5 +11,3 @@
 - Rocio D'Intino - 62341
 
 - Ian Franco Tognetti - 61215
-
----
